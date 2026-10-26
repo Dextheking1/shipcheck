@@ -2,6 +2,8 @@
 
 Paste a public GitHub repo URL, get a pass/fix list for your hackathon submission.
 
+Live: https://shipcheck.benihacking.top
+
 It checks the things submission announcements demand:
 
 - Repo is public

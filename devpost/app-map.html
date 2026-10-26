@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShipCheck — App Map</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 760px; margin: 40px auto; padding: 0 16px; color: #111; line-height: 1.55; }
+  h1 { font-size: 24px; } h2 { font-size: 17px; margin-top: 28px; }
+  code { background: #f2f2f2; padding: 1px 5px; border-radius: 3px; font-size: 90%; }
+  .stop { border-top: 1px solid #ddd; padding: 10px 0; }
+  svg { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<h1>ShipCheck — App Map</h1>
+<p>ShipCheck reads a public GitHub repo and reports whether it is ready to submit to a
+hackathon: public, license, README, planning docs, demo or live link, plus one short
+summary of what to fix first. Two files do all of it: <code>public/index.html</code> (the page)
+and <code>server.js</code> (the server). Nothing is stored.</p>
+
+<h2>One check, end to end</h2>
+<svg viewBox="0 0 720 120" role="img" aria-label="Flow diagram: page sends the repo URL to the check endpoint, which asks the GitHub API and returns five verdicts, then the summary endpoint writes the fix-first text">
+  <rect x="5" y="35" width="130" height="50" fill="#fff" stroke="#111"/>
+  <text x="70" y="65" text-anchor="middle" font-size="13">Page (browser)</text>
+  <rect x="205" y="35" width="150" height="50" fill="#fff" stroke="#111"/>
+  <text x="280" y="58" text-anchor="middle" font-size="13">/api/check</text>
+  <text x="280" y="76" text-anchor="middle" font-size="11">server.js runChecks</text>
+  <rect x="425" y="35" width="130" height="50" fill="#fff" stroke="#111"/>
+  <text x="490" y="65" text-anchor="middle" font-size="13">GitHub API</text>
+  <rect x="585" y="35" width="130" height="50" fill="#fff" stroke="#111"/>
+  <text x="650" y="58" text-anchor="middle" font-size="13">/api/summary</text>
+  <text x="650" y="76" text-anchor="middle" font-size="11">or fallback rule</text>
+  <path d="M135 60 H205" stroke="#111" marker-end="url(#a)"/>
+  <path d="M355 60 H425" stroke="#111" marker-end="url(#a)"/>
+  <path d="M555 60 H585" stroke="#111" marker-end="url(#a)"/>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0 0 L7 3 L0 6 Z" fill="#111"/></marker></defs>
+</svg>
+
+<h2>The route: follow one action</h2>
+<div class="stop"><strong>Stop 1 — the paste.</strong> In <code>public/index.html</code>, the form
+submit handler sends the raw input text to <code>/api/check</code>. The page does no parsing itself;
+when the verdicts come back, <code>render()</code> draws one row per check.</div>
+<div class="stop"><strong>Stop 2 — the verdicts.</strong> In <code>server.js</code>, <code>parseRepo()</code>
+pulls owner/repo out of any pasted shape, and <code>runChecks()</code> asks the GitHub API about the repo,
+its root files, and its README, then builds the five rows. A GitHub 404 short-circuits here: first row FIX,
+the rest "Not run."</div>
+<div class="stop"><strong>Stop 3 — the summary.</strong> The page sends the rows to <code>/api/summary</code>.
+<code>makeSummary()</code> in <code>server.js</code> asks the Pollinations text API for two or three sentences;
+on any failure the <code>fallbackSummary()</code> rule names the first failed check instead. The list never
+waits on this call.</div>
+
+<h2>To change this, start here</h2>
+<ul>
+  <li>Add or change a check: add a row in <code>runChecks()</code> in <code>server.js</code>, and one line in the
+  "What gets checked" list in <code>public/index.html</code>.</li>
+  <li>Change how the summary reads: the prompt string inside <code>makeSummary()</code>.</li>
+  <li>Change the look: the single <code>&lt;style&gt;</code> block in <code>public/index.html</code>. There is no CSS file.</li>
+  <li>Run it on another port: <code>PORT=9000 node server.js</code>.</li>
+</ul>
+
+<h2>A practice to reuse</h2>
+<p>Write the acceptance example before the code. This build started from one concrete expected output,
+"DepVet passes license, README and demo, and fails planning docs naming the missing files"
+(<code>prd.md &gt; Features and Behavior</code>). Every slice was verified against that fixture and the saved
+responses in <code>test-evidence/</code>. When the checker later passed its own repo on a localhost link it
+should not have counted, the fixture habit is what caught it: the detail line named the wrong evidence, so the
+heuristic got fixed and re-verified. Specifying the observable result first made the bug visible in one read.</p>
+
+<h2>Run it again</h2>
+<p><code>node server.js</code>, then open http://localhost:8730/. Live instance:
+https://shipcheck.benihacking.top. This map is a snapshot of commit 6a673fd plus the live-deployment
+change that follows it; it can drift as the code changes.</p>
+</body>
+</html>
