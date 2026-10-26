@@ -24,6 +24,9 @@
   .skip { color: #888; }
   td.detail { color: #333; }
   .checks-list { margin-top: 36px; color: #333; }
+  .summary { margin-top: 24px; border-top: 2px solid #111; padding-top: 12px; }
+  .summary h2 { font-size: 16px; margin: 0 0 6px; }
+  .summary p { margin: 0; line-height: 1.5; }
   .checks-list h2 { font-size: 16px; margin-bottom: 6px; }
   .checks-list li { margin: 3px 0; }
 </style>
@@ -40,6 +43,10 @@
   <p id="msg" class="status-line" hidden></p>
   <p id="err" class="error" hidden></p>
   <div id="results"></div>
+  <div id="summary" class="summary" hidden>
+    <h2>Fix this first</h2>
+    <p id="summary-text">Writing summary…</p>
+  </div>
 
   <div class="checks-list">
     <h2>What gets checked</h2>
@@ -59,6 +66,23 @@
   const msg = document.getElementById("msg");
   const err = document.getElementById("err");
   const results = document.getElementById("results");
+  const summaryBox = document.getElementById("summary");
+  const summaryText = document.getElementById("summary-text");
+
+  async function loadSummary(checks) {
+    summaryBox.hidden = false;
+    summaryText.textContent = "Writing summary…";
+    try {
+      const res = await fetch("/api/summary?checks=" + encodeURIComponent(JSON.stringify(checks)));
+      const data = await res.json();
+      summaryText.textContent = data.summary || "No summary available.";
+    } catch (e2) {
+      const first = checks.find((c) => c.status === "fix");
+      summaryText.textContent = first
+        ? "Fix first: " + first.label + ". " + first.detail
+        : "Everything passes. This repo is clear to submit.";
+    }
+  }
 
   function showError(text) {
     err.textContent = text;
@@ -84,6 +108,7 @@
     e.preventDefault();
     err.hidden = true;
     results.innerHTML = "";
+    summaryBox.hidden = true;
     msg.hidden = false;
     msg.textContent = "Checking…";
     button.disabled = true;
@@ -96,6 +121,7 @@
         return;
       }
       render(data);
+      loadSummary(data.checks);
     } catch (e2) {
       msg.hidden = true;
       showError("GitHub could not be reached. Try again shortly.");

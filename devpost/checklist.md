@@ -19,7 +19,7 @@ Build mode: fast — the builder knows the stack and asked for outcomes fast; ha
   Learner check: Covered in the combined final session for this tiny build.
   Commit: `Add page and repo checks`
 
-- [ ] **2. The fix-first summary appears under the list**
+- [x] **2. The fix-first summary appears under the list**
   Becomes usable: After the rows render, a short summary names the one fix to do first. If the summary service does not answer, the fallback rule names the first failed check instead.
   Why now: The kernel's second half, and it carries the spec's one open uncertainty (summary output quality), which gets checked here with a real failure list.
   PRD ref: `prd.md > Features and Behavior` (The fix-first summary)

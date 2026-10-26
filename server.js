@@ -140,6 +140,36 @@ function demoCheck(info, readmeText) {
   );
 }
 
+const SUMMARY_BASE = process.env.SUMMARY_URL_BASE || "https://text.pollinations.ai/";
+
+export function fallbackSummary(checks) {
+  const first = checks.find((c) => c.status === "fix");
+  if (!first) return "Everything passes. This repo is clear to submit.";
+  return `Fix first: ${first.label}. ${first.detail} The other rows can wait until this one passes.`;
+}
+
+export async function makeSummary(checks) {
+  const failures = checks.filter((c) => c.status === "fix");
+  if (failures.length === 0) return { summary: fallbackSummary(checks), source: "rule" };
+  const list = failures.map((c) => `- ${c.label}: ${c.detail}`).join("\n");
+  const prompt =
+    "A hackathon submission checker found these problems in a GitHub repo:\n" +
+    list +
+    "\nIn two or three short plain sentences, say which one to fix first and why. " +
+    "No list, no markdown, just the sentences.";
+  try {
+    const res = await fetch(SUMMARY_BASE + encodeURIComponent(prompt), {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error("summary " + res.status);
+    const text = (await res.text()).trim();
+    if (!text || text.length > 700) throw new Error("summary unusable");
+    return { summary: text, source: "generated" };
+  } catch {
+    return { summary: fallbackSummary(checks), source: "fallback" };
+  }
+}
+
 function sendJson(res, code, obj) {
   const body = JSON.stringify(obj);
   res.writeHead(code, { "content-type": "application/json" });
@@ -163,6 +193,21 @@ const server = createServer(async (req, res) => {
       }
       const result = await runChecks(parsed.owner, parsed.repo);
       sendJson(res, 200, result);
+      return;
+    }
+    if (url.pathname === "/api/summary") {
+      let checks;
+      try {
+        checks = JSON.parse(url.searchParams.get("checks") || "[]");
+      } catch {
+        checks = [];
+      }
+      if (!Array.isArray(checks) || checks.length === 0) {
+        sendJson(res, 400, { error: "No check results given." });
+        return;
+      }
+      const out = await makeSummary(checks);
+      sendJson(res, 200, out);
       return;
     }
     res.writeHead(404, { "content-type": "text/plain" });
