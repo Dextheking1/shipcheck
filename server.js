@@ -126,6 +126,7 @@ function demoCheck(info, readmeText) {
   }
   const live = urls.find((u) => {
     if (/(github\.com|githubusercontent\.com|img\.shields\.io|shields\.io)/i.test(u)) return false;
+    if (/(localhost|127\.0\.0\.1)/i.test(u)) return false;
     if (/\.(png|jpe?g|gif|svg|webp)(\?|$)/i.test(u)) return false;
     return true;
   });
