@@ -1,0 +1,1 @@
+{"description":"Hackathon submission preflight checker. Paste a public GitHub repo URL, get a pass/fix list.","engines":{"node":">=22"},"license":"MIT","name":"shipcheck","scripts":{"start":"node server.js"},"type":"module","version":"0.1.0"}

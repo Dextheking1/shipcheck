@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShipCheck</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111; background: #fff; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .sub { color: #444; margin: 0 0 24px; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; font-size: 16px; padding: 10px; border: 1px solid #999; border-radius: 4px; }
+  button { font-size: 16px; padding: 10px 18px; border: 0; border-radius: 4px;
+           background: #111; color: #fff; cursor: pointer; }
+  button:disabled { background: #888; cursor: wait; }
+  .error { color: #c0272d; margin-top: 16px; font-weight: 600; }
+  .status-line { color: #444; margin-top: 16px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  td { border-top: 1px solid #ddd; padding: 10px 8px; vertical-align: top; }
+  td.mark { width: 52px; font-weight: 700; }
+  .pass { color: #0a7d2c; }
+  .fix { color: #c0272d; }
+  .skip { color: #888; }
+  td.detail { color: #333; }
+  .checks-list { margin-top: 36px; color: #333; }
+  .checks-list h2 { font-size: 16px; margin-bottom: 6px; }
+  .checks-list li { margin: 3px 0; }
+</style>
+</head>
+<body>
+  <h1>ShipCheck</h1>
+  <p class="sub">Paste a public GitHub repo. Get the pass/fix list for your hackathon submission.</p>
+
+  <form id="form">
+    <input id="repo" type="text" placeholder="https://github.com/owner/repo" autocomplete="off" spellcheck="false">
+    <button id="go" type="submit">Check</button>
+  </form>
+
+  <p id="msg" class="status-line" hidden></p>
+  <p id="err" class="error" hidden></p>
+  <div id="results"></div>
+
+  <div class="checks-list">
+    <h2>What gets checked</h2>
+    <ul>
+      <li>Repo is public</li>
+      <li>License present</li>
+      <li>README present</li>
+      <li>Planning docs present (scope.md, prd.md, spec.md)</li>
+      <li>Demo or live link present</li>
+    </ul>
+  </div>
+
+<script>
+  const form = document.getElementById("form");
+  const input = document.getElementById("repo");
+  const button = document.getElementById("go");
+  const msg = document.getElementById("msg");
+  const err = document.getElementById("err");
+  const results = document.getElementById("results");
+
+  function showError(text) {
+    err.textContent = text;
+    err.hidden = false;
+  }
+
+  function render(result) {
+    const rows = result.checks.map((c) => {
+      const mark = c.status === "pass" ? "PASS" : c.status === "fix" ? "FIX" : "-";
+      return "<tr><td class='mark " + c.status + "'>" + mark + "</td><td>" +
+        escapeHtml(c.label) + "</td><td class='detail'>" + escapeHtml(c.detail) + "</td></tr>";
+    }).join("");
+    results.innerHTML = "<table>" + rows + "</table>";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    err.hidden = true;
+    results.innerHTML = "";
+    msg.hidden = false;
+    msg.textContent = "Checking…";
+    button.disabled = true;
+    try {
+      const res = await fetch("/api/check?repo=" + encodeURIComponent(input.value));
+      const data = await res.json();
+      msg.hidden = true;
+      if (!res.ok) {
+        showError(data.error || "Something went wrong.");
+        return;
+      }
+      render(data);
+    } catch (e2) {
+      msg.hidden = true;
+      showError("GitHub could not be reached. Try again shortly.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
